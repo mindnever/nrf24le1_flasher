@@ -11,12 +11,12 @@
 #define HIGH	1
 
 // pins defs
-#define PIN_FCSN	(1 << 1)	/* RXD */	// nRF2LE1 Chip select
-#define PIN_FMISO	(1 << 2)	/* RTS */
-#define PIN_FMOSI	(1 << 3)	/* CTS */
-#define PIN_FSCK	(1 << 4)	/* DTR */
-#define PIN_RESET	(1 << 5)	/* DSR */	// nRF24LE1 Reset
-#define PIN_PROG	(1 << 6)	/* DCD */	// nRF24LE1 Program
+#define PIN_FCSN	(1 << 3)	/* CS */	// nRF2LE1 Chip select
+#define PIN_FMISO	(1 << 2)	/* MISO */
+#define PIN_FMOSI	(1 << 1)	/* MOSI */
+#define PIN_FSCK	(1 << 0)	/* SCK */
+#define PIN_RESET	(1 << 4)	/* JTAG_RST   */	// nRF24LE1 Reset
+#define PIN_PROG	(1 << 6)	/* JTAG_DBGRQ */	// nRF24LE1 Program
 #define PINS_OUT	(PIN_PROG|PIN_RESET|PIN_FCSN|PIN_FSCK|PIN_FMOSI)
 
 #define BYTES_PER_BIT 3
@@ -71,6 +71,8 @@ int spi_begin(uint8_t bus, uint8_t port)
 		fprintf(stderr, "ftdi_new failed\n");
 		return -1;
 	}
+	
+	ftdi_set_interface( ftdi, INTERFACE_A );
 
 	if (bus > 0) {
 		struct ftdi_device_list *list = NULL;
@@ -103,7 +105,7 @@ int spi_begin(uint8_t bus, uint8_t port)
 			return -3;
 		}
 	} else
-		ret = ftdi_usb_open(ftdi, 0x0403, 0x6001);
+		ret = ftdi_usb_open(ftdi, 0x0403, 0x8a98); // TUMPA
 
 	if (ret < 0 && ret != -5) {
 		fprintf(stderr, "unable to open ftdi device: %d (%s)\n", ret,
