@@ -39,10 +39,10 @@ that pins (extracted from nRF24LE1 spec):
 | FSCK  |    P0.2   |    P0.5   |    P1.2   |
 
 
-FTDI FT232R
+FTDI FT2232R
 -----------
 
-With this chip, we have 8 "GPIOs" to do a bitbang SPI implementation. You need
+With this chip, we have MPSSE mode to do a hardware SPI implementation. You need
 to check if your breakout can configure to 3v3 operation.
 We hook each pin of nRF24LE1 on FT232R as described:
 
