@@ -46,20 +46,17 @@ With this chip, we have 8 "GPIOs" to do a bitbang SPI implementation. You need
 to check if your breakout can configure to 3v3 operation.
 We hook each pin of nRF24LE1 on FT232R as described:
 
-| nRF24LE1 | FT232R |
-|----------|--------|
-|   FCSN   |   RXD  |
-|   FMISO  |   RTS  |
-|   FMOSI  |   CTS  |
-|   FSCK   |   DTR  |
-|   RESET  |   DSR  |
-|   PROG   |   DCD  |
-|   GND    |   GND  |
-|   3v3    |  VCCIO |
-
-Note that the pin FCSN is used as TX too, so we can hook RX on TXD of FT232R and
-we have serial already.
-
+| nRF24LE1 | FT2232R ( TIAO TUMPA )          |
+|----------|---------------------------------|
+|   FCSN   |   ADBUS3 / SPI_CS   / JTAG_TMS  |
+|   FMISO  |   ADBUS2 / SPI_MISO / JTAG_TDO  |
+|   FMOSI  |   ADBUS1 / SPI_MOSI / JTAG_TDI  |
+|   FSCK   |   ADBUS0 / SPI_SCK  / JTAG_TCK  |
+|   RESET  |   ADBUS4 / JTAG_RST             |
+|   PROG   |   ADBUS6 / JTAG_DBGRQ           |
+|   GND    |   GND                           |
+|   3v3    |   VCCIO                         |
++----------+---------------------------------+
 
 Dependencies
 ------------
