@@ -56,7 +56,6 @@ We hook each pin of nRF24LE1 on FT232R as described:
 |   PROG   |   ADBUS6 / JTAG_DBGRQ           |
 |   GND    |   GND                           |
 |   3v3    |   VCCIO                         |
-+----------+---------------------------------+
 
 Dependencies
 ------------
