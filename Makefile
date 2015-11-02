@@ -10,7 +10,7 @@ TARGET = nrf24le1_flasher
 SRCS = \
 	src/hexfile.c \
 	src/main.c \
-	src/spi_ft232r.c
+	src/spi_mpsse.c
 
 HEADERS = \
 	src/hexfile.h \

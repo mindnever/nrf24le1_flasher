@@ -33,6 +33,10 @@
 #define FSR_RDISMB	(1 << 2)	// Flash MB readback protection enabled,
 					// active low
 
+#define FLASH_PAGE_CODE_FIRST 0
+#define FLASH_PAGE_CODE_LAST  31
+#define FLASH_PAGE_DATA_FIRST 32
+#define FLASH_PAGE_DATA_LAST  35
 
 static int spi_started = 0;
 
@@ -105,11 +109,8 @@ static void disable_infen()
 
 static void wait_ready()
 {
-	uint8_t fsr = read_fsr();
-
 	// wait flash ready flag
-	while (fsr & FSR_RDYN)
-		fsr = read_fsr();
+	while( read_fsr() & FSR_RDYN );
 }
 
 static int check_rdismb()
@@ -121,7 +122,6 @@ static void cmd_device(uint8_t bus, uint8_t port)
 {
 	if (spi_started)
 		spi_end();
-
 	if (spi_begin(bus, port) != 0) {
 		fprintf(stderr, "problem accessing device\n");
 		exit(EXIT_FAILURE);
@@ -161,6 +161,28 @@ static void cmd_read_flash(const char *filename)
 	fclose(f);
 }
 
+static uint8_t addr2page( uint16_t address )
+{
+	if( address < 0xfa00 )
+	{
+		return address >> 9;
+	}
+	else if( address < 0xfb00 ) // 
+	{
+		return 32;
+	}
+	else if( address < 0xfc00 )
+	{
+		return 33;
+	}
+	else if( address < 0xfe00 )
+	{
+		return 34;
+	}
+
+	return 35;
+}
+
 static void cmd_write_flash(const char *filename)
 {
 	FILE *fd;
@@ -168,6 +190,8 @@ static void cmd_write_flash(const char *filename)
 	uint8_t buffer[255 + 3] = {0};
 	uint8_t orig[255 + 3] = {0};
 	uint8_t comp[255 + 3] = {0};
+	uint8_t page_erased[36] = {0};
+
 	int count;
 	uint16_t address;
 
@@ -186,6 +210,35 @@ static void cmd_write_flash(const char *filename)
 
 	while ((count = hexfile_getline(fd, &address, buffer + 3,
 						sizeof(buffer) - 3)) > 0) {
+
+
+		uint8_t pg_start = addr2page( address );
+		uint8_t pg_end = addr2page( address + count );
+		
+		while( pg_start <= pg_end )
+		{
+			if( !page_erased[ pg_start ] )
+			{
+				printf( "erasing page %d\n", pg_start );
+				buffer[0] = ERASE_PAGE;
+				buffer[1] = pg_start;
+				
+				enable_wen();
+
+				if(!spi_transfer(buffer, 2))
+				{
+					fprintf(stderr, "SPI error\n");
+					exit(EXIT_FAILURE);
+				}
+				
+				wait_ready();
+				
+				page_erased[ pg_start ] = 1;
+			}
+			
+			++pg_start;
+		}
+
 		enable_wen();
 
 		memcpy(orig, buffer + 3, count);
@@ -239,6 +292,46 @@ static void cmd_erase_flash()
 
 	wait_ready();
 }
+
+static void cmd_erase_pages(uint8_t from, uint8_t to)
+{
+	uint8_t cmd[2];
+
+	if (check_rdismb()) {
+		fprintf(stderr, "flash memory is protected\n");
+		exit(EXIT_FAILURE);
+	}
+	
+	
+	printf("Erasing page:"); fflush(stdout);
+	
+
+	
+	while(from <= to)
+	{
+		cmd[0] = ERASE_PAGE;
+		cmd[1] = from;
+		
+		printf(" %u", from); fflush(stdout);
+
+		enable_wen();
+		disable_infen();
+		
+		if(!spi_transfer(cmd, sizeof(cmd)))
+		{
+			fprintf(stderr, "SPI error\n");
+			exit(EXIT_FAILURE);
+		}
+
+		wait_ready();		
+
+		++from;
+	}
+	
+	printf("\n");
+}
+
+
 
 static void cmd_lock()
 {
@@ -380,6 +473,10 @@ static void cmd_show_usage(const char *name)
 	printf("        Writes InfoPage contents from filename\n");
 	printf("  --erase-all\n");
 	printf("        Erases flash memory and InforPage!!!\n");
+	printf("  --erase-code\n");
+	printf("        Erases only code part of the flash memory\n");
+	printf("  --erase-data\n");
+	printf("        Erases only data part of the flash memory\n");
 }
 
 int main(int argc, char *argv[])
@@ -397,6 +494,8 @@ int main(int argc, char *argv[])
 		{"read-ip",	required_argument,	0, 2},
 		{"write-ip",	required_argument,	0, 3},
 		{"erase-all",	no_argument,		0, 4},
+		{"erase-code",  no_argument,            0, 5},
+		{"erase-data",  no_argument,            0, 6},
 		{0, 0, 0, 0}
 	};
 
@@ -475,6 +574,16 @@ int main(int argc, char *argv[])
 				cmd_device(0, 0);
 
 			cmd_erase_all();
+			break;
+		case 5: // erase code
+			if(!spi_started)
+				cmd_device(0, 0);
+			cmd_erase_pages(FLASH_PAGE_CODE_FIRST, FLASH_PAGE_CODE_LAST);
+			break;
+		case 6: // erase data
+			if(!spi_started)
+				cmd_device(0, 0);
+			cmd_erase_pages(FLASH_PAGE_DATA_FIRST, FLASH_PAGE_DATA_LAST);
 			break;
 		default:
 			cmd_show_usage(argv[0]);
